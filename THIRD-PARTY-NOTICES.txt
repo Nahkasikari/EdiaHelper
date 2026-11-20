@@ -1,0 +1,25 @@
+EdiaHelper - third-party software
+=====================================
+
+EdiaHelper itself:
+  Copyright (C) 2026 Nahkasikari
+  License: GNU General Public License version 3 (LICENSE.txt)
+  Source:  https://github.com/Nahkasikari/EdiaHelper
+
+
+EdiabasLib (included: EdiabasLib\Api32.dll and EdiabasLib\Api64.dll, version 8.0.0.407)
+  Author:  Ulrich Holeschak
+  License: GNU General Public License version 3 (EdiabasLib\LICENSE (EdiabasLib).txt)
+  Source:  https://github.com/uholeschak/ediabaslib
+           The included files are unmodified, from the release "binaries_20260607"
+           (Binaries-20260607.zip, EdiabasLibConfigTool\Api32\):
+           https://github.com/uholeschak/ediabaslib/releases/tag/binaries_20260607
+           Source code of exactly that version:
+           https://github.com/uholeschak/ediabaslib/tree/binaries_20260607
+  SHA-256: Api32.dll  C3F1947DA56A6358D581288062CE3AE1F4323C946D69123E4DE7B0F68F7DA76D
+           Api64.dll  14D5D6E2065EED0BAE6B944AE88608C60D70B892358A777353E20C727BCA8FBC
+
+
+Not included
+  INPA, NCS Expert, ISTA, EDIABAS and their files are BMW software. They are not part of
+  EdiaHelper and must already be installed. EdiaHelper is not affiliated with BMW or MHD.

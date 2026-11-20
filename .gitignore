@@ -1,0 +1,10 @@
+# build output
+build/
+
+# never commit EdiabasLib or BMW binaries
+*.dll
+*.exe
+*.zip
+
+# logs
+*.log

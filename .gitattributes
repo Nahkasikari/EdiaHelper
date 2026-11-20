@@ -1,0 +1,6 @@
+# Windows scripts and sources with Windows line endings in every checkout
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+*.cs text eol=crlf
+*.txt text eol=crlf
+*.config text eol=crlf
