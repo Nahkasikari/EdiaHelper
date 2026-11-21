@@ -6,6 +6,14 @@ Use the **MHD universal WiFi adapter** with BMW's INPA, NCS Expert and ISTA on K
 
 Optional: **NCS Expert coding backups** - every module NCS Expert reads is saved automatically, named after the module and the time, so earlier codings are never lost.
 
+## Download
+
+**[Download EdiaHelper-1.0.0.zip](https://github.com/Nahkasikari/EdiaHelper/releases/download/v1.0.0/EdiaHelper-1.0.0.zip)** (from the [Releases page](https://github.com/Nahkasikari/EdiaHelper/releases/latest), under *Assets*). Unzip it, close INPA / NCS Expert / ISTA and run `Install.cmd`.
+
+> **Do not use the green "Code → Download ZIP" button or "Source code (zip)".** They contain only the source code, not the ready-to-install program.
+
+Requirements: Windows 10 or 11, INPA / EDIABAS 7.3 already installed and working with a K+DCAN cable. ISTA (4.39) is optional. See [Install](#install) below.
+
 ## Background
 
 The MHD adapter can be used with EDIABAS through [EdiabasLib](https://github.com/uholeschak/ediabaslib)'s `Api32.dll` (`ObdComPort = DEEPOBDWIFI`). With an old EdiabasLib build (7.3.0.500), K-line and ENET worked but D-CAN gave `IFH-0018`. What we found:
