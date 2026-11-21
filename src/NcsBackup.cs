@@ -194,7 +194,7 @@ static class NcsBackup
                         Log.Write("NCS backup: module " + info.Module + " recognised from the trace (" + CabdMatch.LastDetail + ")");
                     if (moduleFile && info != null && info.Module == null && info.Ecu == null)
                         Log.Write("NCS backup: module not found. " + (info.Raw == "" ? "NCS Expert window not found." :
-                                  "NCS Expert window: " + (info.Raw.Length > 800 ? info.Raw.Substring(0, 800) : info.Raw)));
+                                  "NCS Expert window: " + MaskVins(info.Raw.Length > 800 ? info.Raw.Substring(0, 800) : info.Raw)));
                     Action<string> ev = Saved;
                     if (ev != null)
                     {
@@ -261,6 +261,13 @@ static class NcsBackup
             return m.Success ? m.Groups[1].Value : null;
         }
         catch { return null; }
+    }
+
+    // The log must not contain full VINs: keep only the last 7 characters, like the backup folder names
+    static string MaskVins(string s)
+    {
+        return Regex.Replace(s, @"\b[A-HJ-NPR-Z0-9]{10}([A-HJ-NPR-Z0-9]{7})\b",
+            m => Regex.IsMatch(m.Value, "[0-9]") && Regex.IsMatch(m.Value, "[A-Z]") ? "..." + m.Groups[1].Value : m.Value);
     }
 
     static bool LoadState()

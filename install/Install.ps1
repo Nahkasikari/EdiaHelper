@@ -35,6 +35,13 @@ function Fail($t) { Write-Host ''; Write-Host $t -ForegroundColor Red; Write-Hos
 
 function Test-EdiabasDir($d) { return $d -and (Test-Path (Join-Path $d 'EDIABAS.INI')) }
 
+# Started from the source code (GitHub's green "Code -> Download ZIP" button) instead of the package?
+if (-not (Test-Path (Join-Path $pkg 'EdiaHelper.exe'))) {
+    Fail ("This is the source code, not the installable package.`n`n" +
+          "Download EdiaHelper-<version>.zip from`n  https://github.com/Nahkasikari/EdiaHelper/releases/latest`n" +
+          "(under Assets, not 'Source code'), unzip it and run Install.cmd from there.")
+}
+
 # ---------------------------------------------------------------- folders
 Step 'Looking for the EDIABAS folders'
 $inpaCandidates = @('C:\EDIABAS\Bin', 'C:\EDIABAS\BIN', 'C:\EC-APPS\EDIABAS\BIN', 'D:\EDIABAS\Bin')

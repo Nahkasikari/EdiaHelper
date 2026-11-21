@@ -76,6 +76,19 @@ static class Check
             return BitConverter.ToString(s.ComputeHash(f));
     }
 
+    // The Interface in EDIABAS.INI, for INPA and for ISTA's own EDIABAS
+    static void CheckInterface(string want, bool istaOk)
+    {
+        bool istaSeparate = istaOk && !Settings.SameFolder(Settings.IstaBin, Settings.EdiabasBin);
+        foreach (string bin in istaSeparate ? new[] { Settings.EdiabasBin, Settings.IstaBin } : new[] { Settings.EdiabasBin })
+        {
+            string label = bin == Settings.EdiabasBin ? "INPA" : "ISTA";
+            string have = Switcher.IniInterface(bin);
+            if (have.ToUpperInvariant() == want) Ok(label + " interface: " + want);
+            else Fail(label + " interface is " + (have == "" ? "not set" : have) + ", expected " + want + ". Press Apply.");
+        }
+    }
+
     static void CheckDlls(bool lib, bool istaOk)
     {
         string[] bins = istaOk ? new[] { Settings.EdiabasBin, Settings.IstaBin } : new[] { Settings.EdiabasBin };
@@ -238,8 +251,7 @@ static class Check
     {
         CheckRuntimes();
         CheckLibConfig(istaOk);
-        if (Switcher.InpaInterface().ToUpperInvariant() == "STD:OBD") Ok("INPA interface: STD:OBD");
-        else Fail("INPA interface is " + Switcher.InpaInterface() + ", expected STD:OBD. Press Apply.");
+        CheckInterface("STD:OBD", istaOk);
 
         // Looked up in the system's connection list, so this also works from "EdiaHelper.exe /check"
         if (Listening(Relay.ListenPort)) Ok("Relay is running on 127.0.0.1:" + Relay.ListenPort);
@@ -257,8 +269,7 @@ static class Check
     static void CheckMhdEnet(bool istaOk)
     {
         CheckRuntimes();
-        if (Switcher.InpaInterface().ToUpperInvariant() == "ENET") Ok("INPA interface: ENET");
-        else Fail("INPA interface is " + Switcher.InpaInterface() + ", expected ENET. Press Apply.");
+        CheckInterface("ENET", istaOk);
         if (!CheckMhdWifi("ENET", Relay.IsEnetSsid)) return;
         string gw = WifiGateway();
         if (gw == "") { Fail("The WiFi has no gateway address; the adapter did not give the laptop an address."); return; }
@@ -291,14 +302,12 @@ static class Check
             if (p == c.Port) Ok(label + ": obd.ini uses " + p);
             else Fail(label + ": obd.ini uses " + (p == "" ? "no port" : p) + ", the cable is on " + c.Port + ". Press \"Match settings to cable\".");
         }
-        if (Switcher.InpaInterface().ToUpperInvariant() == "STD:OBD") Ok("INPA interface: STD:OBD");
-        else Fail("INPA interface is " + Switcher.InpaInterface() + ", expected STD:OBD. Press Apply.");
+        CheckInterface("STD:OBD", istaOk);
     }
 
     static void CheckEnetCable()
     {
-        if (Switcher.InpaInterface().ToUpperInvariant() == "ENET") Ok("INPA interface: ENET");
-        else Fail("INPA interface is " + Switcher.InpaInterface() + ", expected ENET. Press Apply.");
+        CheckInterface("ENET", Switcher.IsEdiabasDir(Settings.IstaBin));
         bool found = false;
         try
         {

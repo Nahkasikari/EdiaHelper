@@ -28,12 +28,12 @@ using System.Windows.Forms;
 [assembly: System.Reflection.AssemblyTitle("EdiaHelper")]
 [assembly: System.Reflection.AssemblyProduct("EdiaHelper")]
 [assembly: System.Reflection.AssemblyDescription("Adapter switching, MHD WiFi relay and NCS Expert coding backups for INPA, NCS Expert and ISTA")]
-[assembly: System.Reflection.AssemblyVersion("1.0.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.0.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.0.1.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.0.1.0")]
 
 static class Program
 {
-    public const string Version = "1.0.0";
+    public const string Version = "1.0.1";
     public const string RepoUrl = "https://github.com/Nahkasikari/EdiaHelper";
 
     [STAThread]
@@ -363,9 +363,12 @@ static class Switcher
             return BitConverter.ToString(sha.ComputeHash(fs));
     }
 
-    public static string InpaInterface()
+    public static string InpaInterface() { return IniInterface(Settings.EdiabasBin); }
+
+    // The Interface setting in a folder's EDIABAS.INI
+    public static string IniInterface(string bin)
     {
-        string ini = Path.Combine(Settings.EdiabasBin, "EDIABAS.INI");
+        string ini = Path.Combine(bin, "EDIABAS.INI");
         if (!File.Exists(ini)) return "";
         Match m = Regex.Match(File.ReadAllText(ini, Encoding.Default), @"^\s*Interface\s*=\s*(\S+)", RegexOptions.Multiline);
         return m.Success ? m.Groups[1].Value : "";
@@ -504,12 +507,16 @@ static class Switcher
             if (File.Exists(istaCfg) && IstaSeparate()) { string d = Path.Combine(Settings.IstaBin, "EdiabasLib.config"); NotLink(d); File.Copy(istaCfg, d, true); }
         }
 
-        // Interface for INPA / NCS Expert. ISTA chooses its interface itself.
-        string ini = Path.Combine(Settings.EdiabasBin, "EDIABAS.INI");
-        NotLink(ini);
-        string t = File.ReadAllText(ini, Encoding.Default);
-        t = Regex.Replace(t, @"^([ \t]*Interface[ \t]*=[ \t]*)\S+", "${1}" + Iface(i), RegexOptions.Multiline);
-        File.WriteAllText(ini, t, Encoding.Default);
+        // Interface in EDIABAS.INI, for INPA / NCS Expert and for ISTA's own EDIABAS: ISTA's
+        // "EDIABAS standard settings" connection uses it (a fresh ISTA installation has REMOTE)
+        foreach (string bin in bins)
+        {
+            string ini = Path.Combine(bin, "EDIABAS.INI");
+            NotLink(ini);
+            string t = File.ReadAllText(ini, Encoding.Default);
+            t = Regex.Replace(t, @"^([ \t]*Interface[ \t]*=[ \t]*)\S+", "${1}" + Iface(i), RegexOptions.Multiline);
+            File.WriteAllText(ini, t, Encoding.Default);
+        }
 
         if (i == Icom && Settings.IcomIp != "") WriteIcom();
         return null;

@@ -2,6 +2,14 @@
 
 Version numbers: last number = fixes, middle = new features, first = big changes.
 
+## 1.0.1 - 2026-11-21
+
+- **ISTA works right after installing EdiaHelper, also with a fresh ISTA installation:** switching now also sets `Interface` in ISTA's own EDIABAS.INI (STD:OBD for the MHD K-line / D-CAN and the K+DCAN cable, ENET for the MHD's ENET mode). A fresh ISTA has `REMOTE` there, so ISTA's "EDIABAS standard settings" connection did not work until it was changed by hand. Check connection checks ISTA's interface too.
+- The installer says clearly when it was started from the source code (GitHub's "Code → Download ZIP") instead of the installable package.
+- Full VINs are no longer written to the log (the NCS backup "module not found" line keeps only the last 7 characters).
+
+The ISTA problem was found on a second laptop with a freshly installed ISTA; 1.0.0 had been tested only on a computer whose ISTA was already set to STD:OBD.
+
 ## 1.0.0 - 2026-11-20
 
 First public version.
