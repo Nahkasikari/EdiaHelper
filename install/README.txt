@@ -54,6 +54,14 @@ If something does not work
   is set to connect manually).
 - Tray icon menu -> "Open log" shows what the relay did.
 - The INPA and ISTA folders can be changed on the "EDIABAS folders" tab.
+- Trace (logging), on the "EDIABAS folders" tab: set the trace level, repeat the one action that
+  fails, then set it back to 0. "Open trace folders" shows the files.
+    0 = off (normal use)
+    1 = messages to and from the car - enough for most troubleshooting
+    2 = level 1 + error details
+    3 = every script step - gigabytes and very slow; only for a few seconds
+  The level takes effect the next time INPA / NCS Expert / ISTA starts, and is set back to 0
+  whenever EdiaHelper starts.
 
 NCS Expert coding backups
 -------------------------

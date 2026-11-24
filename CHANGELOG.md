@@ -2,6 +2,12 @@
 
 Version numbers: last number = fixes, middle = new features, first = big changes.
 
+## 1.1.0 - (in testing)
+
+- **Trace level** on the EDIABAS folders tab: a dropdown for `IfhTrace` 0-3 with a short description of each level. It sets INPA's and ISTA's EDIABAS.INI at once and applies to both the K+DCAN cable (BMW's EDIABAS) and the MHD (EdiabasLib). Level 3 asks for confirmation. "Open trace folders" opens the trace folders and shows their size. A level left on is set back to 0 whenever EdiaHelper starts. Check connection warns while a trace level is on.
+- EdiaHelper's EdiabasLib.config files no longer set `IfhTrace` / `ApiTrace`, so EDIABAS.INI is the one place for the trace level (EdiabasLib reads EDIABAS.INI first and its config file second, which used to override it with 0).
+- `EdiaHelper.exe /trace:<0-3>` sets the trace level from the command line.
+
 ## 1.0.1 - 2026-11-21
 
 - **ISTA works right after installing EdiaHelper, also with a fresh ISTA installation:** switching now also sets `Interface` in ISTA's own EDIABAS.INI (STD:OBD for the MHD K-line / D-CAN and the K+DCAN cable, ENET for the MHD's ENET mode). A fresh ISTA has `REMOTE` there, so ISTA's "EDIABAS standard settings" connection did not work until it was changed by hand. Check connection checks ISTA's interface too.

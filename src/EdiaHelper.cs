@@ -13,6 +13,7 @@
 // One instance only; starting it again just opens the window of the running one.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -28,12 +29,12 @@ using System.Windows.Forms;
 [assembly: System.Reflection.AssemblyTitle("EdiaHelper")]
 [assembly: System.Reflection.AssemblyProduct("EdiaHelper")]
 [assembly: System.Reflection.AssemblyDescription("Adapter switching, MHD WiFi relay and NCS Expert coding backups for INPA, NCS Expert and ISTA")]
-[assembly: System.Reflection.AssemblyVersion("1.0.1.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.0.1.0")]
+[assembly: System.Reflection.AssemblyVersion("1.1.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.1.0.0")]
 
 static class Program
 {
-    public const string Version = "1.0.1";
+    public const string Version = "1.1.0";
     public const string RepoUrl = "https://github.com/Nahkasikari/EdiaHelper";
 
     [STAThread]
@@ -47,6 +48,14 @@ static class Program
         {
             int ch;
             File.WriteAllText(args[2], int.TryParse(args[1], out ch) && ch >= 0 && ch < Switcher.Names.Length ? LastSeen.Report(ch) : "unknown choice");
+            return;
+        }
+
+        // /trace:<0-3>: set the trace level in both EDIABAS folders (no window; same as the dropdown)
+        if (args.Length == 1 && Regex.IsMatch(args[0], "^/trace:[0-3]$"))
+        {
+            try { Trace.Set(args[0][7] - '0'); Environment.Exit(0); }
+            catch (Exception ex) { Log.Write("Could not set the trace level: " + ex.Message); Environment.Exit(1); }
             return;
         }
 
@@ -156,6 +165,7 @@ static class Program
         Application.SetCompatibleTextRenderingDefault(false);
         Relay.Verbose = File.Exists(Path.Combine(Settings.Dir, "verbose.txt"));
         Log.Write("EdiaHelper " + Version + " started");
+        Trace.ResetAtStart();   // a trace level left on (e.g. before a restart) is turned off
         bool relayOk = Relay.Start();
 
         TrayApp app = new TrayApp(show, !(args.Length > 0 && args[0] == "/tray"));
@@ -330,7 +340,7 @@ static class Switcher
     }
 
     // Refuses to write through a link (junction / symbolic link) into some other place
-    static void NotLink(string path)
+    public static void NotLink(string path)
     {
         if ((File.Exists(path) || Directory.Exists(path)) && (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
             throw new IOException(path + " is a link; EdiaHelper does not write through links.");
@@ -366,12 +376,26 @@ static class Switcher
     public static string InpaInterface() { return IniInterface(Settings.EdiabasBin); }
 
     // The Interface setting in a folder's EDIABAS.INI
-    public static string IniInterface(string bin)
+    public static string IniInterface(string bin) { return IniValue(bin, "Interface"); }
+
+    // A setting from a folder's EDIABAS.INI (the first active line), or "" if it is not there
+    public static string IniValue(string bin, string key)
     {
-        string ini = Path.Combine(bin, "EDIABAS.INI");
-        if (!File.Exists(ini)) return "";
-        Match m = Regex.Match(File.ReadAllText(ini, Encoding.Default), @"^\s*Interface\s*=\s*(\S+)", RegexOptions.Multiline);
-        return m.Success ? m.Groups[1].Value : "";
+        try
+        {
+            string ini = Path.Combine(bin, "EDIABAS.INI");
+            if (!File.Exists(ini)) return "";
+            Match m = Regex.Match(File.ReadAllText(ini, Encoding.Default), @"^[ \t]*" + Regex.Escape(key) + @"[ \t]*=[ \t]*([^\r\n;]*)",
+                                  RegexOptions.Multiline | RegexOptions.IgnoreCase);
+            return m.Success ? m.Groups[1].Value.Trim() : "";
+        }
+        catch { return ""; }
+    }
+
+    // The EDIABAS folders EdiaHelper looks after: INPA's, and ISTA's if it is a different one
+    public static string[] EdiabasBins()
+    {
+        return IstaSeparate() ? new[] { Settings.EdiabasBin, Settings.IstaBin } : new[] { Settings.EdiabasBin };
     }
 
     public static int Current()
@@ -1228,7 +1252,7 @@ class MainForm : Form
         autoBox.CheckedChanged += (s, e) => { if (autoBox.Checked != Settings.AutoSwitch) app.SetAutoSwitch(autoBox.Checked); };
 
         // Three tabs: the adapter (everyday use), NCS backups, and the EDIABAS folders (set once)
-        TabControl tabs = new TabControl { Location = new Point(6, 8), Size = new Size(518, 330) };
+        TabControl tabs = new TabControl { Location = new Point(6, 8), Size = new Size(518, 370) };
         TabPage adapterTab = new TabPage("Adapter"), ncsTab = new TabPage("NCS backups"), folderTab = new TabPage("EDIABAS folders");
         foreach (TabPage p in new[] { adapterTab, ncsTab, folderTab }) p.UseVisualStyleBackColor = true;
         Control[] adapterControls = { l1, combo, check, icomPanel, cablePanel, autoBox, apply, current, lastSeen, legend };
@@ -1250,19 +1274,82 @@ class MainForm : Form
         folderTab.Controls.Add(folders);
         folderTab.Controls.Add(new Label
         {
-            Location = new Point(6, 134), Size = new Size(490, 60), ForeColor = Color.DimGray,
+            Location = new Point(6, 128), Size = new Size(490, 34), ForeColor = Color.DimGray,
             Text = "The installer finds these folders. Change them only if INPA / NCS Expert or ISTA are installed somewhere else."
         });
 
+        // Trace level (IfhTrace) for both EDIABAS folders
+        GroupBox trace = new GroupBox { Text = "Trace (logging) for INPA / NCS Expert / ISTA", Location = new Point(2, 162), Size = new Size(498, 176) };
+        traceCombo = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(95, 22), Width = 395 };
+        traceCombo.Items.AddRange(Trace.Choices);
+        traceHelp = new Label { Location = new Point(10, 54), Size = new Size(480, 80), ForeColor = Color.DimGray };
+        traceFiles = new Label { Location = new Point(10, 146), Size = new Size(350, 20), AutoEllipsis = true };
+        Button openTrace = new Button { Text = "Open trace folders", Location = new Point(364, 140), Size = new Size(126, 28) };
+        trace.Controls.AddRange(new Control[] { new Label { Text = "Trace level:", Location = new Point(10, 26), AutoSize = true }, traceCombo, traceHelp, traceFiles, openTrace });
+        folderTab.Controls.Add(trace);
+        traceCombo.SelectedIndexChanged += (s, e) => TraceChanged();
+        openTrace.Click += (s, e) =>
+        {
+            List<string> traceFolders = Trace.Folders();
+            if (traceFolders.Count == 0)
+                MessageBox.Show(this, "There are no trace files yet. The folder is created when INPA / NCS Expert / ISTA writes the first trace.", "EdiaHelper", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            foreach (string f in traceFolders)
+                try { Process.Start(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe"), "\"" + f + "\""); } catch { }
+            ShowTrace();
+        };
+
         tabs.TabPages.AddRange(new[] { adapterTab, ncsTab, folderTab });
-        tabs.SelectedIndexChanged += (s, e) => { if (tabs.SelectedTab == ncsTab) ShowNcs(); };
-        ClientSize = new Size(530, 372);
-        about.Location = new Point(14, 346);
-        Button aboutButton = new Button { Text = "About", Location = new Point(444, 341), Size = new Size(76, 26) };
+        tabs.SelectedIndexChanged += (s, e) => { if (tabs.SelectedTab == ncsTab) ShowNcs(); if (tabs.SelectedTab == folderTab) ShowTrace(); };
+        ClientSize = new Size(530, 412);
+        about.Location = new Point(14, 386);
+        Button aboutButton = new Button { Text = "About", Location = new Point(444, 381), Size = new Size(76, 26) };
         aboutButton.Click += (s, e) => { using (AboutForm f = new AboutForm()) f.ShowDialog(this); };
         Controls.Add(aboutButton);
         Controls.AddRange(new Control[] { tabs, about });
         AcceptButton = apply;
+    }
+
+    // ---- trace level ----
+
+    readonly ComboBox traceCombo;
+    readonly Label traceHelp, traceFiles;
+    bool traceLoading;
+
+    void ShowTrace()
+    {
+        traceLoading = true;
+        int l = Trace.Level();
+        traceCombo.SelectedIndex = l;
+        traceHelp.Text = Trace.Help[l] + "\r\nTakes effect the next time INPA / NCS Expert / ISTA starts. Set back to 0 whenever EdiaHelper starts.";
+        List<string> folders = Trace.Folders();
+        long total = 0;
+        foreach (string f in folders) total += Trace.Size(f);
+        traceFiles.Text = folders.Count == 0 ? "No trace files yet." : "Trace files: " + Trace.SizeText(total) + " in " + folders.Count + (folders.Count == 1 ? " folder" : " folders");
+        traceLoading = false;
+    }
+
+    void TraceChanged()
+    {
+        if (traceLoading) return;
+        int l = traceCombo.SelectedIndex;
+        if (l == 3 && MessageBox.Show(this, "Level 3 writes every step of the diagnostic scripts: gigabytes of trace files, and INPA / ISTA become very slow " +
+                "(an ISTA identification once took 35 minutes and wrote 27 GB).\n\nUse it only for a few seconds of one specific job. Set level 3?",
+                "EdiaHelper", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+        {
+            ShowTrace();
+            return;
+        }
+        try { Trace.Set(l); }
+        catch (UnauthorizedAccessException)
+        {
+            MessageBox.Show(this, "Your user account cannot change EDIABAS.INI in these folders. Run Install.cmd again: it sets up the file permissions.",
+                "EdiaHelper", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, "Could not set the trace level: " + ex.Message, "EdiaHelper", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+        ShowTrace();
     }
 
     void UpdateCableInfo()
@@ -1281,6 +1368,7 @@ class MainForm : Form
         int c = Switcher.Current();
         combo.SelectedIndex = c >= 0 && c < combo.Items.Count ? c : -1;
         ShowAuto();
+        ShowTrace();
         ncsBox.Checked = Settings.NcsBackup;
         ncsWorkBox.Text = Settings.NcsWork;
         ncsDirBox.Text = NcsBackup.BackupDir;

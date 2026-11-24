@@ -12,7 +12,7 @@ del build\MakeIcon.exe
 
 "%CSC%" /nologo /target:winexe /platform:anycpu /optimize+ /win32icon:build\EdiaHelper.ico /out:build\EdiaHelper.exe ^
   /r:System.Windows.Forms.dll /r:System.Drawing.dll ^
-  src\EdiaHelper.cs src\Relay.cs src\Check.cs src\IconArt.cs src\NcsBackup.cs src\LastSeen.cs || goto :error
+  src\EdiaHelper.cs src\Relay.cs src\Check.cs src\IconArt.cs src\NcsBackup.cs src\LastSeen.cs src\Trace.cs || goto :error
 
 echo Build OK: build\EdiaHelper.exe
 exit /b 0

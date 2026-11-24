@@ -56,6 +56,10 @@ static class Check
         CheckDlls(lib, istaOk);
         string running = Switcher.DiagRunning();
         if (running != null) Info(running + " is running.");
+        int trace = Trace.Level();
+        if (trace == 0) Ok("Trace level: 0 (off)");
+        else Warn("Trace level is " + trace + ": INPA / NCS Expert / ISTA write trace files" + (trace == 3 ? " (gigabytes, very slow)" : "") +
+                  ". Set it back to 0 on the EDIABAS folders tab when you are done.");
 
         switch (c)
         {
