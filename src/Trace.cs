@@ -118,7 +118,8 @@ static class Trace
     }
 
     // Where trace files are written: EdiabasLib (MHD) uses <folder>\Trace, or its own folder in
-    // LocalAppData if that is not writable; BMW's EDIABAS (cable) uses TracePath from EDIABAS.INI
+    // LocalAppData if that is not writable; BMW's EDIABAS (cable) uses TracePath from EDIABAS.INI;
+    // ISTA redirects both into its session log folders (see IstaLogs)
     public static List<string> Folders()
     {
         List<string> list = new List<string>();
@@ -138,12 +139,28 @@ static class Trace
             add(Switcher.IniValue(bin, "TracePath"));
         }
         add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"EdiabasLib\Trace"));
+        add(IstaLogs());
         return list;
+    }
+
+    // ISTA sets EDIABAS's TracePath to its own session log folder: ...\ISTA\Logs\<session>\ifh.trc
+    // (for the MHD and the cable alike). Only the trace files there are counted and deleted; ISTA's
+    // other log files stay ("Last seen" reads them).
+    public static string IstaLogs()
+    {
+        try
+        {
+            if (!Switcher.IsEdiabasDir(Settings.IstaBin)) return null;
+            string logs = Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(Settings.IstaBin.TrimEnd('\\'))), "Logs");
+            return Directory.Exists(logs) ? Path.GetFullPath(logs).TrimEnd('\\') : null;
+        }
+        catch { return null; }
     }
 
     // EDIABAS's own trace files: api*.trc and ifh*.trc (EdiabasLib: api.trc, ifh.trc; BMW's EDIABAS:
     // API.TRC, IFH.TRC). Only these are counted and deleted: a trace folder can be a shared folder
-    // such as C:\Windows\Temp (ISTA's TracePath), where other programs may keep their own .trc files.
+    // such as C:\Windows\Temp (TracePath in ISTA's EDIABAS.INI), where other programs may keep their
+    // own .trc files, or ISTA's log folder, whose other files must stay.
     static readonly Regex TraceName = new Regex(@"^(api|ifh)[^\\/]*\.trc$", RegexOptions.IgnoreCase);
 
     public static List<FileInfo> TraceFiles(string folder)
@@ -151,8 +168,17 @@ static class Trace
         List<FileInfo> list = new List<FileInfo>();
         try
         {
-            foreach (FileInfo f in new DirectoryInfo(folder).GetFiles("*.trc", SearchOption.TopDirectoryOnly))
-                if (TraceName.IsMatch(f.Name)) list.Add(f);
+            DirectoryInfo d = new DirectoryInfo(folder);
+            List<DirectoryInfo> dirs = new List<DirectoryInfo> { d };
+            // ISTA's log folder: one subfolder per session
+            if (string.Equals(folder.TrimEnd('\\'), IstaLogs(), StringComparison.OrdinalIgnoreCase))
+                dirs.AddRange(d.GetDirectories());
+            foreach (DirectoryInfo dir in dirs)
+            {
+                if ((dir.Attributes & FileAttributes.ReparsePoint) != 0) continue;
+                foreach (FileInfo f in dir.GetFiles("*.trc", SearchOption.TopDirectoryOnly))
+                    if (TraceName.IsMatch(f.Name)) list.Add(f);
+            }
         }
         catch { }
         return list;
