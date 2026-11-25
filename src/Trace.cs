@@ -50,7 +50,8 @@ static class Trace
         return Math.Min(max, 3);
     }
 
-    // Writes IfhTrace into EDIABAS.INI in every EDIABAS folder (INPA and ISTA)
+    // Writes IfhTrace into EDIABAS.INI in every EDIABAS folder (INPA and ISTA). With a level above 0
+    // also TraceBuffering = 0: buffered trace lines are lost when ISTA ends EDIABAS abruptly.
     public static void Set(int level)
     {
         if (level < 0 || level > 3) throw new ArgumentOutOfRangeException("level");
@@ -60,18 +61,48 @@ static class Trace
             string ini = Path.Combine(bin, "EDIABAS.INI");
             Switcher.NotLink(ini);
             string t = File.ReadAllText(ini, Encoding.Default);
-            Regex r = new Regex(@"^([ \t]*IfhTrace[ \t]*=[ \t]*)\S*", RegexOptions.Multiline | RegexOptions.IgnoreCase);
-            if (r.IsMatch(t)) t = r.Replace(t, "${1}" + level, 1);
-            else
-            {
-                Match c = Regex.Match(t, @"^[ \t]*\[Configuration\][^\r\n]*\r?\n", RegexOptions.Multiline | RegexOptions.IgnoreCase);
-                t = c.Success ? t.Insert(c.Index + c.Length, "IfhTrace         = " + level + "\r\n")
-                              : "[Configuration]\r\nIfhTrace         = " + level + "\r\n" + t;
-            }
+            t = SetKey(t, "IfhTrace", level.ToString());
+            if (level > 0) t = SetKey(t, "TraceBuffering", "0");
             File.WriteAllText(ini, t, Encoding.Default);
             done.Add(bin);
         }
         Log.Write("Trace level set to " + level + " in " + string.Join(", ", done.ToArray()));
+    }
+
+    // Sets key = value in the [Configuration] section of an EDIABAS.INI text (adds the line if missing)
+    static string SetKey(string t, string key, string value)
+    {
+        Regex r = new Regex(@"^([ \t]*" + Regex.Escape(key) + @"[ \t]*=[ \t]*)\S*", RegexOptions.Multiline | RegexOptions.IgnoreCase);
+        if (r.IsMatch(t)) return r.Replace(t, "${1}" + value, 1);
+        Match c = Regex.Match(t, @"^[ \t]*\[Configuration\][^\r\n]*\r?\n", RegexOptions.Multiline | RegexOptions.IgnoreCase);
+        string line = key.PadRight(17) + "= " + value + "\r\n";
+        return c.Success ? t.Insert(c.Index + c.Length, line) : "[Configuration]\r\n" + line + t;
+    }
+
+    // Deletes the trace files (*.trc) in the trace folders. Returns how many files and bytes were
+    // deleted; files in use (INPA / ISTA still open) are skipped and counted in 'skipped'.
+    public static long DeleteFiles(out int files, out int skipped)
+    {
+        long bytes = 0; files = 0; skipped = 0;
+        foreach (string folder in Folders())
+        {
+            FileInfo[] all;
+            try { all = new DirectoryInfo(folder).GetFiles("*.trc", SearchOption.TopDirectoryOnly); }
+            catch { continue; }
+            foreach (FileInfo f in all)
+            {
+                try
+                {
+                    if ((f.Attributes & FileAttributes.ReparsePoint) != 0) { skipped++; continue; }
+                    long n = f.Length;
+                    f.Delete();
+                    bytes += n; files++;
+                }
+                catch { skipped++; }
+            }
+        }
+        Log.Write("Trace files deleted: " + files + " (" + SizeText(bytes) + ")" + (skipped > 0 ? ", " + skipped + " in use or not allowed" : ""));
+        return bytes;
     }
 
     // At start: a trace that was left on is turned off

@@ -1283,9 +1283,25 @@ class MainForm : Form
         traceCombo = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(95, 22), Width = 395 };
         traceCombo.Items.AddRange(Trace.Choices);
         traceHelp = new Label { Location = new Point(10, 54), Size = new Size(480, 80), ForeColor = Color.DimGray };
-        traceFiles = new Label { Location = new Point(10, 146), Size = new Size(350, 20), AutoEllipsis = true };
+        traceFiles = new Label { Location = new Point(10, 146), Size = new Size(218, 20), AutoEllipsis = true };
         Button openTrace = new Button { Text = "Open trace folders", Location = new Point(364, 140), Size = new Size(126, 28) };
-        trace.Controls.AddRange(new Control[] { new Label { Text = "Trace level:", Location = new Point(10, 26), AutoSize = true }, traceCombo, traceHelp, traceFiles, openTrace });
+        Button deleteTrace = new Button { Text = "Delete trace files", Location = new Point(232, 140), Size = new Size(126, 28) };
+        trace.Controls.AddRange(new Control[] { new Label { Text = "Trace level:", Location = new Point(10, 26), AutoSize = true }, traceCombo, traceHelp, traceFiles, deleteTrace, openTrace });
+        deleteTrace.Click += (s, e) =>
+        {
+            List<string> traceFolders = Trace.Folders();
+            long total = 0;
+            foreach (string f in traceFolders) total += Trace.Size(f);
+            if (total == 0) { MessageBox.Show(this, "There are no trace files to delete.", "EdiaHelper", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
+            if (MessageBox.Show(this, "Delete all trace files (" + Trace.SizeText(total) + ") in:\n\n" + string.Join("\n", traceFolders.ToArray()) +
+                    "\n\nThey are deleted permanently. Close INPA / NCS Expert / ISTA first.", "EdiaHelper",
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) != DialogResult.Yes) return;
+            int files, skipped;
+            long bytes = Trace.DeleteFiles(out files, out skipped);
+            MessageBox.Show(this, "Deleted " + files + (files == 1 ? " file" : " files") + " (" + Trace.SizeText(bytes) + ")." +
+                (skipped > 0 ? "\n" + skipped + " could not be deleted (still in use, or no permission)." : ""), "EdiaHelper", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            ShowTrace();
+        };
         folderTab.Controls.Add(trace);
         traceCombo.SelectedIndexChanged += (s, e) => TraceChanged();
         openTrace.Click += (s, e) =>
