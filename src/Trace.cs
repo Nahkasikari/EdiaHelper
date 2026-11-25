@@ -134,10 +134,11 @@ static class Trace
             catch { }
         };
         foreach (string bin in Switcher.EdiabasBins())
-        {
             add(Path.Combine(bin, "Trace"));
-            add(Switcher.IniValue(bin, "TracePath"));
-        }
+        // BMW's EDIABAS for INPA / NCS Expert writes to TracePath (C:\EDIABAS\TRACE). ISTA's own
+        // EDIABAS.INI also names one (C:\Windows\Temp), but ISTA always redirects its traces to its
+        // session log folders, so that shared folder is not shown.
+        add(Switcher.IniValue(Settings.EdiabasBin, "TracePath"));
         add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"EdiabasLib\Trace"));
         add(IstaLogs());
         return list;
@@ -159,8 +160,8 @@ static class Trace
 
     // EDIABAS's own trace files: api*.trc and ifh*.trc (EdiabasLib: api.trc, ifh.trc; BMW's EDIABAS:
     // API.TRC, IFH.TRC). Only these are counted and deleted: a trace folder can be a shared folder
-    // such as C:\Windows\Temp (TracePath in ISTA's EDIABAS.INI), where other programs may keep their
-    // own .trc files, or ISTA's log folder, whose other files must stay.
+    // (a TracePath can point anywhere), where other programs may keep their own .trc files, or
+    // ISTA's log folder, whose other files must stay.
     static readonly Regex TraceName = new Regex(@"^(api|ifh)[^\\/]*\.trc$", RegexOptions.IgnoreCase);
 
     public static List<FileInfo> TraceFiles(string folder)

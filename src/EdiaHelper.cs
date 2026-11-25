@@ -1344,12 +1344,26 @@ class MainForm : Form
         traceLoading = false;
     }
 
+    // An extra line in the level 3 warning when the drive with the EDIABAS folder is getting full
+    static string LowDiskNote()
+    {
+        try
+        {
+            DriveInfo d = new DriveInfo(Path.GetPathRoot(Path.GetFullPath(Settings.EdiabasBin)));
+            long free = d.AvailableFreeSpace;
+            if (free < 100L * 1024 * 1024 * 1024)
+                return "\n\nOnly " + Trace.SizeText(free) + " free on drive " + d.Name.TrimEnd('\\') + ".";
+        }
+        catch { }
+        return "";
+    }
+
     void TraceChanged()
     {
         if (traceLoading) return;
         int l = traceCombo.SelectedIndex;
-        if (l == 3 && MessageBox.Show(this, "Level 3 writes every step of the diagnostic scripts: gigabytes of trace files, and INPA / ISTA become very slow " +
-                "(an ISTA identification once took 35 minutes and wrote 27 GB).\n\nUse it only for a few seconds of one specific job. Set level 3?",
+        if (l == 3 && MessageBox.Show(this, "Level 3 writes every step of the diagnostic scripts. A full ISTA vehicle test can then take up to an hour " +
+                "and write tens of gigabytes.\n\nUse it only for a few seconds of one specific job." + LowDiskNote() + "\n\nSet level 3?",
                 "EdiaHelper", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
         {
             ShowTrace();
