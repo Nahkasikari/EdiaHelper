@@ -8,7 +8,7 @@ Optional: **NCS Expert coding backups** - every module NCS Expert reads is saved
 
 ## Download
 
-**[Download EdiaHelper-1.0.1.zip](https://github.com/Nahkasikari/EdiaHelper/releases/download/v1.0.1/EdiaHelper-1.0.1.zip)** (from the [Releases page](https://github.com/Nahkasikari/EdiaHelper/releases/latest), under *Assets*). Unzip it, close INPA / NCS Expert / ISTA and run `Install.cmd`.
+**[Download EdiaHelper-1.1.0.zip](https://github.com/Nahkasikari/EdiaHelper/releases/download/v1.1.0/EdiaHelper-1.1.0.zip)** (from the [Releases page](https://github.com/Nahkasikari/EdiaHelper/releases/latest), under *Assets*). Unzip it, close INPA / NCS Expert / ISTA and run `Install.cmd`.
 
 > **Do not use the green "Code → Download ZIP" button or "Source code (zip)".** They contain only the source code, not the ready-to-install program.
 
