@@ -79,17 +79,14 @@ static class Trace
         return c.Success ? t.Insert(c.Index + c.Length, line) : "[Configuration]\r\n" + line + t;
     }
 
-    // Deletes the trace files (*.trc) in the trace folders. Returns how many files and bytes were
-    // deleted; files in use (INPA / ISTA still open) are skipped and counted in 'skipped'.
+    // Deletes EDIABAS's trace files (api*.trc, ifh*.trc) in the trace folders. Returns how many files
+    // and bytes were deleted; files in use (INPA / ISTA still open) are skipped and counted in 'skipped'.
     public static long DeleteFiles(out int files, out int skipped)
     {
         long bytes = 0; files = 0; skipped = 0;
         foreach (string folder in Folders())
         {
-            FileInfo[] all;
-            try { all = new DirectoryInfo(folder).GetFiles("*.trc", SearchOption.TopDirectoryOnly); }
-            catch { continue; }
-            foreach (FileInfo f in all)
+            foreach (FileInfo f in TraceFiles(folder))
             {
                 try
                 {
@@ -144,11 +141,27 @@ static class Trace
         return list;
     }
 
+    // EDIABAS's own trace files: api*.trc and ifh*.trc (EdiabasLib: api.trc, ifh.trc; BMW's EDIABAS:
+    // API.TRC, IFH.TRC). Only these are counted and deleted: a trace folder can be a shared folder
+    // such as C:\Windows\Temp (ISTA's TracePath), where other programs may keep their own .trc files.
+    static readonly Regex TraceName = new Regex(@"^(api|ifh)[^\\/]*\.trc$", RegexOptions.IgnoreCase);
+
+    public static List<FileInfo> TraceFiles(string folder)
+    {
+        List<FileInfo> list = new List<FileInfo>();
+        try
+        {
+            foreach (FileInfo f in new DirectoryInfo(folder).GetFiles("*.trc", SearchOption.TopDirectoryOnly))
+                if (TraceName.IsMatch(f.Name)) list.Add(f);
+        }
+        catch { }
+        return list;
+    }
+
     public static long Size(string folder)
     {
         long n = 0;
-        try { foreach (FileInfo f in new DirectoryInfo(folder).GetFiles("*", SearchOption.AllDirectories)) n += f.Length; }
-        catch { }
+        foreach (FileInfo f in TraceFiles(folder)) n += f.Length;
         return n;
     }
 
